@@ -10,6 +10,7 @@ class InfoCard extends StatelessWidget {
     required this.fields,
   });
 
+  /// Presenta los campos informativos; ninguna otra clase la instancia actualmente.
   @override
   Widget build(BuildContext context) {
     return Card(

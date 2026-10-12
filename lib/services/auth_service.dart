@@ -4,17 +4,28 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import '../models/user_model.dart';
+import 'product_service.dart' show baseUrl;
 
 class AuthException implements Exception {
   final String message;
   AuthException(this.message);
+
+  /// Devuelve el texto del error; auth_controller.dart lo presenta a la interfaz.
   @override
   String toString() => message;
 }
 
 abstract class IAuthService {
+  /// Contrato de autenticación implementado por AuthService en este archivo.
   Future<UserModel?> login(String username, String password);
+
+  /// Contrato de registro implementado por AuthService en este archivo.
+  Future<void> register(String email, String username, String password);
+
+  /// Contrato de cierre de sesión implementado por AuthService en este archivo.
   Future<void> logout();
+
+  /// Contrato de restauración de sesión implementado por AuthService en este archivo.
   Future<UserModel?> getStoredUser();
 }
 
@@ -26,12 +37,10 @@ class AuthService implements IAuthService {
   AuthService({FlutterSecureStorage? secureStorage})
       : _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
+  /// Autentica, decodifica el token y persiste la sesión; auth_controller.dart lo invoca.
   @override
   Future<UserModel?> login(String username, String password) async {
-    // =============================================
-    // AQUÍ SE CONECTA CON LA FAKE STORE API
-    // =============================================
-    final url = Uri.parse('https://fakestoreapi.com/auth/login');
+    final url = Uri.parse('$baseUrl/usuarios');
 
     final http.Response response;
     try {
@@ -47,8 +56,7 @@ class AuthService implements IAuthService {
       throw AuthException('Error de conexión: $e');
     }
 
-    // La Fake Store API devuelve 201 (no 200) cuando el login es exitoso
-    if (response.statusCode == 200 || response.statusCode == 201) {
+    if (response.statusCode == 200) {
       // Extraer el token del JSON de respuesta
       final data = jsonDecode(response.body);
       final String token = data['token'];
@@ -61,10 +69,12 @@ class AuthService implements IAuthService {
       await _secureStorage.write(key: _tokenKey, value: token);
 
       // Crear el modelo de usuario (aquí se asigna el rol automáticamente)
+      // fromIdAndUsername está definido en user_model.dart.
       final user = UserModel.fromIdAndUsername(userId, username);
 
       // Guardar datos del usuario en SharedPreferences
       final prefs = await SharedPreferences.getInstance();
+      // toJson está definido en user_model.dart.
       await prefs.setString(_userKey, jsonEncode(user.toJson()));
 
       return user;
@@ -76,6 +86,48 @@ class AuthService implements IAuthService {
   }
 
   @override
+  Future<void> register(String email, String username, String password) async {
+    final url = Uri.parse('$baseUrl/usuarios');
+
+    final http.Response response;
+    try {
+      response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'username': username,
+          'password': password,
+        }),
+      );
+    } catch (e) {
+      throw AuthException('Error de conexión: $e');
+    }
+
+    if (response.statusCode == 201) return;
+
+    String? serverMessage;
+    try {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic> && data['error'] is String) {
+        serverMessage = data['error'] as String;
+      }
+    } on FormatException {
+      serverMessage = null;
+    }
+
+    if (response.statusCode == 400 || response.statusCode == 409) {
+      throw AuthException(
+        serverMessage ?? 'No se pudo completar el registro.',
+      );
+    }
+    throw AuthException(
+      serverMessage ?? 'Error en el servidor: ${response.statusCode}',
+    );
+  }
+
+  /// Elimina token y datos persistidos; auth_controller.dart lo invoca al cerrar sesión.
+  @override
   Future<void> logout() async {
     // US02: Limpieza profunda de memoria persistente
     await _secureStorage.deleteAll();
@@ -83,6 +135,7 @@ class AuthService implements IAuthService {
     await prefs.clear();
   }
 
+  /// Recupera el usuario guardado; auth_controller.dart lo invoca al restaurar sesión.
   @override
   Future<UserModel?> getStoredUser() async {
     final token = await _secureStorage.read(key: _tokenKey);
@@ -92,9 +145,11 @@ class AuthService implements IAuthService {
     final userData = prefs.getString(_userKey);
     if (userData == null) return null;
 
+    // fromJson está definido en user_model.dart.
     return UserModel.fromJson(jsonDecode(userData));
   }
 
+  /// Normaliza el ID de usuario recibido en el JWT; login de este archivo lo utiliza.
   int _extractUserId(dynamic sub) {
     if (sub is int) return sub;
     if (sub is String) return int.tryParse(sub) ?? 0;

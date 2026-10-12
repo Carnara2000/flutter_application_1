@@ -11,13 +11,7 @@ class UserModel {
     required this.role,
   });
 
-  // =============================================
-  // AQUÍ SE ASIGNA EL ROL SEGÚN EL ID
-  // Regla de negocio del profesor:
-  // ID 1 y 2 → Administrador
-  // ID 3 → Auditor
-  // ID 4 en adelante → Cliente
-  // =============================================
+  /// Asigna el rol con base en el ID; auth_service.dart lo usa al autenticar.
   factory UserModel.fromIdAndUsername(int id, String username) {
     final UserRole role;
     if (id == 1 || id == 2) {
@@ -30,12 +24,14 @@ class UserModel {
     return UserModel(id: id, username: username, role: role);
   }
 
+  /// Serializa el usuario para guardarlo; auth_service.dart lo usa al persistir.
   Map<String, dynamic> toJson() => {
         'id': id,
         'username': username,
         'role': role.name,
       };
 
+  /// Reconstruye el usuario persistido; auth_service.dart lo usa al restaurar sesión.
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['id'] as int,

@@ -14,7 +14,9 @@ import 'package:flutter_application_1/models/user_model.dart';
 import 'package:flutter_application_1/services/auth_service.dart';
 import 'package:flutter_application_1/views/login_view.dart';
 
+/// Ejecuta las pruebas de widgets del inicio de sesión.
 void main() {
+  // Verifica la presentación de LoginView, definida en login_view.dart.
   testWidgets('muestra el formulario de inicio de sesión',
       (WidgetTester tester) async {
     await tester.pumpWidget(
@@ -28,8 +30,11 @@ void main() {
     expect(find.byType(TextFormField), findsNWidgets(2));
     expect(find.text('Usuario'), findsOneWidget);
     expect(find.text('Contraseña'), findsOneWidget);
+    expect(find.byIcon(Icons.shopping_bag_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.eco_rounded), findsNothing);
   });
 
+  // Verifica la validación del formulario implementada en login_view.dart.
   testWidgets('valida los campos obligatorios', (WidgetTester tester) async {
     await tester.pumpWidget(
       ChangeNotifierProvider(
@@ -45,6 +50,7 @@ void main() {
     expect(find.text('Ingrese una contraseña'), findsOneWidget);
   });
 
+  // Verifica el tratamiento del resultado de login definido en auth_controller.dart.
   test('rechaza un login que no devuelve usuario', () async {
     final controller = AuthController(authService: FakeAuthService());
 
@@ -57,12 +63,18 @@ void main() {
 }
 
 class FakeAuthService implements IAuthService {
+  /// Simula que auth_service.dart no tiene una sesión persistida.
   @override
   Future<UserModel?> getStoredUser() async => null;
 
+  /// Simula credenciales que no producen usuario; auth_controller.dart consume este contrato.
   @override
   Future<UserModel?> login(String username, String password) async => null;
 
+  @override
+  Future<void> register(String email, String username, String password) async {}
+
+  /// Simula el cierre de sesión definido por el contrato en auth_service.dart.
   @override
   Future<void> logout() async {}
 }

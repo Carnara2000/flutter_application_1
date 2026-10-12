@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 
 import '../models/product_model.dart';
 
+const String baseUrl = 'http://192.168.100.3:3000/api';
+
 class ProductException implements Exception {
   final String message;
 
@@ -15,20 +17,40 @@ class ProductException implements Exception {
 
 abstract class IProductService {
   Future<List<ProductModel>> getProducts();
+
   Future<List<String>> getCategories();
+
   Future<List<ProductModel>> getProductsByCategory(String category);
-  Future<ProductModel?> getProduct(int id);
+
+  Future<ProductModel?> getProduct(String id);
+
+  Future<ProductModel> createProduct(ProductModel product);
+
   Future<ProductModel> updateProduct(ProductModel product);
-  Future<void> deleteProduct(int id);
+
+  Future<void> deleteProduct(String id);
 }
 
 class ProductService implements IProductService {
-  static final Uri _baseUri = Uri.parse('https://fakestoreapi.com');
+  static final Uri _productsUri = Uri.parse('$baseUrl/productos');
+  final bool Function() _isAdmin;
 
-  Future<dynamic> _request(String method, Uri uri, {Map<String, dynamic>? body}) async {
+  ProductService({bool Function()? isAdmin})
+      : _isAdmin = isAdmin ?? (() => false);
+
+  Future<dynamic> _request(
+    String method,
+    Uri uri, {
+    Map<String, dynamic>? body,
+  }) async {
     try {
       final response = switch (method) {
         'GET' => await http.get(uri),
+        'POST' => await http.post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          ),
         'PUT' => await http.put(
             uri,
             headers: {'Content-Type': 'application/json'},
@@ -40,7 +62,8 @@ class ProductService implements IProductService {
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw ProductException(
-          'La API no pudo completar la operación (código ${response.statusCode}).',
+          'El servidor no pudo completar la operación '
+          '(código ${response.statusCode}).',
         );
       }
       if (response.body.isEmpty) return null;
@@ -48,16 +71,27 @@ class ProductService implements IProductService {
     } on ProductException {
       rethrow;
     } on FormatException {
-      throw const ProductException('La respuesta de la API no es válida.');
+      throw const ProductException('La respuesta del servidor no es válida.');
     } catch (e) {
-      throw ProductException('No se pudo conectar con Fake Store API: $e');
+      throw ProductException('No se pudo conectar con el servidor: $e');
+    }
+  }
+
+  void _requireAdmin() {
+    if (!_isAdmin()) {
+      throw const ProductException(
+        'Acceso denegado: solo un Administrador puede modificar productos.',
+      );
     }
   }
 
   @override
   Future<List<ProductModel>> getProducts() async {
-    final data = await _request('GET', _baseUri.resolve('/products'));
-    if (data is! List) throw const ProductException('La API devolvió un catálogo inválido.');
+    final data = await _request('GET', _productsUri);
+    if (data is! List) {
+      throw const ProductException(
+          'El servidor devolvió un catálogo inválido.');
+    }
     return data
         .whereType<Map<String, dynamic>>()
         .map(ProductModel.fromJson)
@@ -66,44 +100,78 @@ class ProductService implements IProductService {
 
   @override
   Future<List<String>> getCategories() async {
-    final data = await _request('GET', _baseUri.resolve('/products/categories'));
-    if (data is! List) throw const ProductException('No se pudieron cargar las categorías.');
-    return data.whereType<String>().toList();
+    final products = await getProducts();
+    return products.map((product) => product.category).toSet().toList();
   }
 
   @override
   Future<List<ProductModel>> getProductsByCategory(String category) async {
-    final path = '/products/category/${Uri.encodeComponent(category)}';
-    final data = await _request('GET', _baseUri.resolve(path));
-    if (data is! List) throw const ProductException('La categoría no devolvió productos válidos.');
-    return data
-        .whereType<Map<String, dynamic>>()
-        .map(ProductModel.fromJson)
-        .toList();
+    final products = await getProducts();
+    return products.where((product) => product.category == category).toList();
   }
 
   @override
-  Future<ProductModel?> getProduct(int id) async {
-    final data = await _request('GET', _baseUri.resolve('/products/$id'));
-    if (data is! Map<String, dynamic> || data.isEmpty) return null;
-    return ProductModel.fromJson(data);
+  Future<ProductModel?> getProduct(String id) async {
+    final products = await getProducts();
+    for (final product in products) {
+      if (product.id == id) return product;
+    }
+    return null;
   }
 
   @override
-  Future<ProductModel> updateProduct(ProductModel product) async {
+  Future<ProductModel> createProduct(ProductModel product) async {
+    _requireAdmin();
     final data = await _request(
-      'PUT',
-      _baseUri.resolve('/products/${product.id}'),
-      body: product.toJson(),
+      'POST',
+      _productsUri,
+      body: {
+        'title': product.title,
+        'price': product.price,
+        'description': product.description,
+        'category': product.category,
+        'image': product.image,
+      },
     );
-    if (data is! Map<String, dynamic> || data.isEmpty) {
-      throw const ProductException('La API no devolvió el producto actualizado.');
+    if (data is! Map<String, dynamic> || data['_id'] is! String) {
+      throw const ProductException(
+        'El servidor no devolvió el ID Mongo del producto creado.',
+      );
     }
     return ProductModel.fromJson(data);
   }
 
   @override
-  Future<void> deleteProduct(int id) async {
-    await _request('DELETE', _baseUri.resolve('/products/$id'));
+  Future<ProductModel> updateProduct(ProductModel product) async {
+    _requireAdmin();
+    final data = await _request(
+      'PUT',
+      Uri.parse('$baseUrl/productos/${product.id}'),
+      body: {
+        'title': product.title,
+        'price': product.price,
+        'description': product.description,
+        'category': product.category,
+        'image': product.image,
+      },
+    );
+    if (data is! Map<String, dynamic> || data.isEmpty) {
+      throw const ProductException(
+        'El servidor no devolvió el producto actualizado.',
+      );
+    }
+    return ProductModel.fromJson(data);
+  }
+
+  @override
+  Future<void> deleteProduct(String id) async {
+    _requireAdmin();
+    final data = await _request(
+      'DELETE',
+      Uri.parse('$baseUrl/productos/$id'),
+    );
+    if (data is! Map<String, dynamic> || data['producto'] is! Map) {
+      throw const ProductException('El servidor no confirmó la eliminación.');
+    }
   }
 }

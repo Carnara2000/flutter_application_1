@@ -17,15 +17,6 @@ subprojects {
 }
 subprojects {
     project.evaluationDependsOn(":app")
-
-    afterEvaluate {
-        extensions.findByType(com.android.build.gradle.BaseExtension::class.java)?.let { androidExt ->
-            if (androidExt.compileSdkVersionCodename.isNullOrBlank()) {
-                androidExt.compileSdkVersion("36")
-            }
-            androidExt.defaultConfig.targetSdkVersion(36)
-        }
-    }
 }
 
 tasks.register<Delete>("clean") {

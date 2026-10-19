@@ -4,7 +4,10 @@ import 'package:http/http.dart' as http;
 
 import '../models/product_model.dart';
 
-const String baseUrl = 'http://192.168.100.3:3000/api';
+const String baseUrl = String.fromEnvironment(
+  'API_BASE_URL',
+  defaultValue: 'http://172.20.10.2:3000/api',
+);
 
 class ProductException implements Exception {
   final String message;

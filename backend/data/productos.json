@@ -1,0 +1,90 @@
+[{
+  "_id": {
+    "$oid": "6ac9e0d74e0adda992e0f2b7"
+  },
+  "title": "Jabón",
+  "price": 25,
+  "description": "Jabón salvo me salva de la grasa.",
+  "category": "Producto de limpieza",
+  "image": "https://onixsuper.com/wp-content/uploads/2025/12/detergente-salvo-liquido-limon-300-ml-grande-10972-600x600.jpg"
+},
+{
+  "_id": {
+    "$oid": "6ac9e0f74e0adda992e0f2b8"
+  },
+  "title": "Clorox",
+  "price": 35,
+  "description": "Limpiador eficaz a base de blanqueador recomendado para clínicas y oficinas.",
+  "category": "Producto de limpieza",
+  "image": "https://i5.walmartimages.com/seo/Clorox-Disinfecting-Liquid-Bleach-Regular-Scent-121-fl-oz_78cc069b-db7e-4358-9e83-e76d45d02099.c79e64be82f46ae6d6b5cf4b5c9bb47e.jpeg"
+},
+{
+  "_id": {
+    "$oid": "6ac9e10c4e0adda992e0f2b9"
+  },
+  "title": "Cascade",
+  "price": 50,
+  "description": "Brillo inmejorable para los platos y la cristalería de la empresa.",
+  "category": "Producto de limpieza",
+  "image": "https://www.kroger.com/product/images/xlarge/front/0003077206224"
+},
+{
+  "_id": {
+    "$oid": "6ac9e12b4e0adda992e0f2ba"
+  },
+  "title": "Base de maquillaje Fit Me Matte & Poreless",
+  "price": 145,
+  "description": "Maybelline Base de Maquillaje Líquida Fit Me Matte & Poreless, Pure Beige 235, 30 ml, matifica y controla brillo por 16h, minimiza la apariencia de poros, arrugas y líneas de expresión",
+  "category": "Maquillaje",
+  "image": "https://m.media-amazon.com/images/I/51FbtYTIRgL._AC_SY300_SX300_QL70_ML2_.jpg"
+},
+{
+  "_id": {
+    "$oid": "6ac9e1414e0adda992e0f2bb"
+  },
+  "title": "Gloss Kiko Milano",
+  "price": 315,
+  "description": "KIKO MILANO - 3d Hydra Lip Gloss 17 Softening Lipgloss for a 3D look | Pearly Mauve Color | Non-Comedogenic | Professional Makeup | Made in Italy",
+  "category": "Maquillaje",
+  "image": "https://m.media-amazon.com/images/I/71YcddxBVSL._AC_SY300_SX300_QL70_ML2_.jpg"
+},
+{
+  "_id": {
+    "$oid": "6ac9e1524e0adda992e0f2bc"
+  },
+  "title": "Primer Prebase elf cosmetics",
+  "price": 890,
+  "description": "e.l.f. Cosmetics Power Grip Primer Prebase Tamaño Jumbo",
+  "category": "Maquillaje",
+  "image": "https://m.media-amazon.com/images/I/51Zz33a4RoL._AC_SX425_.jpg"
+},
+{
+  "_id": {
+    "$oid": "6ac9e1904e0adda992e0f2bd"
+  },
+  "title": "Mabe-Refrigerador",
+  "price": 13524,
+  "description": "Mabe - Refrigerador Automático 250 L Inox Mate Plata - RMA250FYMRM0",
+  "category": "Electrodomesticos",
+  "image": "https://m.media-amazon.com/images/I/41H94aXGjvL._AC_SX522_.jpg"
+},
+{
+  "_id": {
+    "$oid": "6ac9e1a24e0adda992e0f2be"
+  },
+  "title": "Mabe-Estufa",
+  "price": 6353,
+  "description": "Mabe - Estufa de Piso 76 cm, Color Plata Mercury - EM7622BAPS2",
+  "category": "Electrodomesticos",
+  "image": "https://m.media-amazon.com/images/I/51HU43ifyTL._AC_SY450_.jpg"
+},
+{
+  "_id": {
+    "$oid": "6ac9e1b94e0adda992e0f2bf"
+  },
+  "title": "Mabe-Estufa",
+  "price": 6353,
+  "description": "Ninja Licuadora y Procesador Auto-iQ 1400W 5 Programas 2.1L BN801",
+  "category": "Electrodomesticos",
+  "image": "https://m.media-amazon.com/images/I/715x+SPIpXL._AC_SX300_SY300_QL70_ML2_.jpg"
+}]

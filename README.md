@@ -1,17 +1,32 @@
-# flutter_application_1
+# App Login Mongo
 
-A new Flutter project.
+Aplicación Flutter conectada a una API Node.js/Express con MongoDB. El backend
+está integrado en [`backend/`](backend/README.md) y organizado con MVC:
+modelos, controladores y rutas separados.
 
-## Getting Started
+## Iniciar el backend
 
-This project is a starting point for a Flutter application.
+1. Entra a `backend/` e instala dependencias con `npm install`.
+2. Si todavía no existe `.env`, copia `.env.example` con
+   `Copy-Item .env.example .env`; configura `MONGO_URI` y `JWT_SECRET`. No
+   compartas ni subas `.env`.
+3. Ejecuta `npm start`. El servidor escucha en `0.0.0.0:3000`, necesario para
+   aceptar conexiones desde otros dispositivos de la red.
+4. Verifica `http://localhost:3000/api/health`.
 
-A few resources to get you started if this is your first Flutter project:
+## Conectar Flutter
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+El valor predeterminado de la API se conserva como
+`http://172.20.10.2:3000/api`. Si la dirección del equipo es distinta, inicia
+Flutter con el valor correcto para tu entorno:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```powershell
+flutter run --dart-define=API_BASE_URL=http://<IP_DEL_EQUIPO>:3000/api
+```
+
+Para el emulador Android, usa normalmente `http://10.0.2.2:3000/api`; para
+Flutter Web en la misma computadora, usa `http://localhost:3000/api`.
+
+Las instrucciones de configuración de MongoDB y los endpoints están en
+[`backend/README.md`](backend/README.md). La arquitectura y los flujos se
+describen en [`MANUAL_TECNICO.md`](MANUAL_TECNICO.md).

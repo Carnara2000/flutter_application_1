@@ -2,9 +2,9 @@
 
 ## Alcance y cómo leer este documento
 
-Este manual describe el código que existe actualmente en los proyectos Flutter y Node.js/Express conectados a MongoDB. Las rutas Flutter son relativas a la raíz de este proyecto. El backend está en la carpeta externa `C:\Users\Santy\Downloads\app-login-mongo\app-login-mongo`; los enlaces a `server.js` parten de la raíz Flutter y apuntan a esa ubicación.
+Este manual describe la aplicación Flutter y el backend Node.js/Express conectado a MongoDB. Las rutas Flutter son relativas a la raíz de este proyecto; el backend MVC está integrado en [`backend/`](backend/README.md).
 
-La app Flutter usa como raíz HTTP `http://192.168.100.3:3000/api`, declarada como `baseUrl` en [product_service.dart](lib/services/product_service.dart#L7). En este manual, las URL se muestran completas para el entorno local configurado.
+La app Flutter usa como raíz HTTP predeterminada `http://172.20.10.2:3000/api`, declarada como `baseUrl` en [product_service.dart](lib/services/product_service.dart#L7). Se puede cambiar al ejecutar Flutter mediante `--dart-define=API_BASE_URL=...`.
 
 ### Mapa de responsabilidades
 
@@ -23,7 +23,9 @@ La app Flutter usa como raíz HTTP `http://192.168.100.3:3000/api`, declarada co
 | Conversión JSON de producto | [product_model.dart](lib/models/product_model.dart#L1) |
 | Conversión de ID numérico a rol | [user_model.dart](lib/models/user_model.dart#L1) |
 | Etiquetas de rol | [user_role.dart](lib/models/enums/user_role.dart#L1) |
-| Endpoints y MongoDB | [server.js](../../../../Downloads/app-login-mongo/app-login-mongo/server.js#L1) |
+| Rutas de productos y usuarios | [product_routes.js](backend/routes/product_routes.js) y [user_routes.js](backend/routes/user_routes.js) |
+| Controladores MVC | [product_controller.js](backend/controllers/product_controller.js) y [user_controller.js](backend/controllers/user_controller.js) |
+| Modelos y conexión MongoDB | [product_model.js](backend/models/product_model.js), [user_model.js](backend/models/user_model.js) y [database.js](backend/config/database.js) |
 
 ### Contrato general Flutter ↔ API
 
@@ -32,17 +34,17 @@ La app Flutter usa como raíz HTTP `http://192.168.100.3:3000/api`, declarada co
 - Las peticiones de autenticación se realizan directamente en `AuthService` en [auth_service.dart](lib/services/auth_service.dart#L42), también con `Content-Type: application/json`.
 - La API de productos no recibe ni verifica el JWT. Las restricciones por rol que se describen abajo se implementan en Flutter, no como autorización del servidor.
 - El ID de producto en Flutter es `String` y representa el `_id` hexadecimal de MongoDB. El ID de usuario usado para decidir el rol es el campo numérico `id` de `Usuarios`; no es el `_id` de Mongo.
-- Android permite HTTP sin TLS en [AndroidManifest.xml](android/app/src/main/AndroidManifest.xml#L10), y tiene permiso INTERNET en la línea 4. El backend escucha en el puerto 3000 sin fijar un host; por tanto, la disponibilidad desde el móvil también depende de la red local y del firewall del equipo.
+- Android permite HTTP sin TLS en [AndroidManifest.xml](android/app/src/main/AndroidManifest.xml#L10), y tiene permiso INTERNET en la línea 4. El backend escucha en `0.0.0.0:3000`; la disponibilidad desde el móvil también depende de la red local, la URL configurada en Flutter y el firewall del equipo.
 
 ## Inicialización del backend
 
-No es una acción de pantalla Flutter: ocurre al ejecutar `node server.js`.
+No es una acción de pantalla Flutter: ocurre al ejecutar `npm start` desde [`backend/`](backend/README.md).
 
-1. [server.js](../../../../Downloads/app-login-mongo/app-login-mongo/server.js#L1) importa Express, CORS, MongoDB (`MongoClient`, `ObjectId`) y `jsonwebtoken`; carga configuración mediante `dotenv`.
-2. Crea Express, habilita `cors()` y `express.json()`, y lee `MONGO_URI` y `JWT_SECRET` del entorno. Si falta cualquiera, lanza un error antes de aceptar peticiones.
-3. `iniciarServidor()` en la línea 49 conecta `MongoClient` a MongoDB Atlas, selecciona la base `appLogin` y asigna `Productos` y `Usuarios` a sus colecciones correspondientes.
-4. Solo después de conectar llama `app.listen(3000, ...)` en la línea 59. No especifica host, por lo que Node escucha en las interfaces disponibles. Si falla la conexión, escribe el error y termina el proceso con código 1.
-5. Las rutas leen o modifican esas colecciones. Las credenciales y la URI no se documentan aquí ni deben copiarse a archivos públicos.
+1. [server.js](backend/server.js) carga la configuración con `dotenv` y valida `PORT` y `JWT_SECRET`.
+2. [database.js](backend/config/database.js) conecta MongoClient usando `MONGO_URI` y selecciona la base `appLogin`; los modelos consultan `Productos` y `Usuarios`.
+3. Solo después de conectar, `server.js` inicia Express en `0.0.0.0` y el puerto configurado (3000 por defecto), para admitir solicitudes de dispositivos de la red.
+4. [app.js](backend/app.js) monta CORS, JSON, `/api/health` y los routers MVC. Si falla la conexión a MongoDB, el servidor no empieza a escuchar y el proceso termina con error.
+5. Configura `.env` a partir de [`backend/.env.example`](backend/.env.example); las credenciales no deben copiarse a archivos públicos.
 
 ---
 
@@ -70,7 +72,7 @@ No se hace petición al backend al restaurar la sesión. El servidor no valida e
 - Si hay token y datos del usuario guardados, `AuthController.user` se restaura y se abre el catálogo.
 - Si no hay token o no hay `user_data`, `getStoredUser()` devuelve `null` y se muestra el login.
 - `AuthController.restoreSession()` captura excepciones de lectura o parseo, pone el usuario en `null` y notifica a los listeners; no muestra un mensaje de error al usuario.
-- La sesión restaurada no se contrasta con el estado actual de MongoDB. El token actual se firma sin una expiración explícita en el código de [server.js](../../../../Downloads/app-login-mongo/app-login-mongo/server.js#L177), y al restaurar Flutter solo comprueba que el token exista.
+- La sesión restaurada no se contrasta con el estado actual de MongoDB. El token actual se firma sin una expiración explícita en el código de autenticación de [user_controller.js](backend/controllers/user_controller.js), y al restaurar Flutter solo comprueba que el token exista.
 
 ### 5. Datos involucrados
 
@@ -93,14 +95,14 @@ El usuario escribe username y contraseña en `LoginView` y toca **Ingresar**.
 3. Llama a `NetworkService.isConnected()` en [network_service.dart](lib/services/network_service.dart#L13). Si informa que no hay conectividad, muestra el SnackBar `Sin conexión a internet. Verifica tu red.` y no envía una petición.
 4. Obtiene el `AuthController` del proveedor y llama `AuthController.login(username, password)`, definido en [auth_controller.dart](lib/controllers/auth_controller.dart#L42). Flutter recorta espacios al principio y final de ambos valores con `trim()`.
 5. `AuthController.login()` activa `isLoading`, borra el error anterior e invoca `AuthService.login()` en [auth_service.dart](lib/services/auth_service.dart#L42).
-6. `AuthService.login()` construye `POST http://192.168.100.3:3000/api/usuarios`. El body JSON es `{"username":"...","password":"..."}` y el único header explícito es `Content-Type: application/json`.
+6. `AuthService.login()` construye `POST http://172.20.10.2:3000/api/usuarios`. El body JSON es `{"username":"...","password":"..."}` y el único header explícito es `Content-Type: application/json`.
 7. Para respuesta 200, `AuthService.login()` extrae `token`, decodifica el JWT con `JwtDecoder.decode()`, lee el claim `sub` y convierte su valor a entero mediante `_extractUserId()` (línea 155).
 8. `UserModel.fromIdAndUsername()` en [user_model.dart](lib/models/user_model.dart#L15) deriva el rol del ID numérico. El modelo formado se guarda en `AuthController.user`; el token se guarda en `FlutterSecureStorage` (`auth_token`) y `user.toJson()` se guarda en `SharedPreferences` (`user_data`).
 9. `AuthController` notifica el cambio de estado. `_handleLogin()` detecta el resultado correcto y usa `Navigator.pushNamedAndRemoveUntil()` para abrir el catálogo y quitar la pantalla de login del historial de navegación.
 
 ### 3. Lado backend (`server.js`)
 
-1. `app.post('/api/usuarios', ...)` está definido en [server.js](../../../../Downloads/app-login-mongo/app-login-mongo/server.js#L151). El backend comparte esa ruta entre login y registro: si el body **no** contiene la propiedad `email`, interpreta la petición como login.
+1. `POST /api/usuarios` está definido en [user_routes.js](backend/routes/user_routes.js) y procesado por [user_controller.js](backend/controllers/user_controller.js). El backend comparte esa ruta entre login y registro: si el body **no** contiene la propiedad `email`, interpreta la petición como login.
 2. Comprueba que `username` sea una cadena no vacía tras `trim()` y que `password` sea una cadena no vacía. Si falta o es inválido alguno, responde **400**: `{"error":"Se requieren username y password."}`.
 3. Consulta `Usuarios` con `usuariosCollection.findOne({ username })`. La contraseña se compara exactamente con `user.password`; no se aplica hashing.
 4. Si encuentra el usuario y coincide la contraseña, exige que `user.id` sea entero. Si no lo es, responde **500**: `{"error":"Error al iniciar sesión."}`.
@@ -172,13 +174,13 @@ En la pantalla de login, el usuario toca **¿No tienes cuenta? Regístrate**.
 4. El botón **Crear cuenta** invoca `_submit()` (línea 32). Evita un segundo envío simultáneo, valida el formulario y activa el indicador de carga.
 5. `_submit()` consulta `NetworkService.isConnected()`. Si la comprobación falla, construye `AuthException("Sin conexión a internet. Verifica tu red.")`.
 6. Llama `AuthService.register(email, username, password)` en [auth_service.dart](lib/services/auth_service.dart#L89), recortando espacios externos de email y username, pero no los de password.
-7. El servicio arma `POST http://192.168.100.3:3000/api/usuarios`, header `Content-Type: application/json`, body `{"email":"...","username":"...","password":"..."}`.
+7. El servicio arma `POST http://172.20.10.2:3000/api/usuarios`, header `Content-Type: application/json`, body `{"email":"...","username":"...","password":"..."}`.
 8. Si el servicio termina correctamente, la vista cierra el registro devolviendo el username ingresado. `LoginView._openRegistration()` recibe ese username, lo prellena, limpia el campo contraseña y muestra `Cuenta creada. Ya puedes iniciar sesión.`.
 9. El usuario debe iniciar sesión por separado; el registro no crea automáticamente una sesión ni emite token.
 
 ### 3. Lado backend (`server.js`)
 
-1. La misma ruta `app.post('/api/usuarios', ...)`, definida en [server.js](../../../../Downloads/app-login-mongo/app-login-mongo/server.js#L151), decide que es registro porque el body incluye la propiedad `email`.
+1. La misma ruta `POST /api/usuarios`, definida en [user_routes.js](backend/routes/user_routes.js) y procesada por [user_controller.js](backend/controllers/user_controller.js), decide que es registro porque el body incluye la propiedad `email`.
 2. Comprueba que `email`, `username` y `password` sean strings no vacíos. En caso de faltantes responde **400** con `{"error":"Faltan campos obligatorios: <campos>."}`.
 3. Recorta espacios externos de email y username. Busca primero `{ username: normalizedUsername }` y luego `{ email: normalizedEmail }` en la colección `Usuarios`.
 4. Si el username ya existe responde **409** `{"error":"El username ya está en uso."}`; si ya existe el email, **409** `{"error":"El email ya está en uso."}`.
@@ -216,14 +218,14 @@ Se abre `HomeView` después de iniciar sesión o restaurar una sesión; también
 2. `_CatalogView.initState()` (línea 39) programa `ProductController.loadCatalog()` tras el primer frame.
 3. `loadCatalog()` en [product_controller.dart](lib/controllers/product_controller.dart#L55) incrementa un identificador de petición, cambia estado a loading, vacía temporalmente la lista y comprueba conectividad.
 4. Llama `ProductService.getProducts()` en [product_service.dart](lib/services/product_service.dart#L89).
-5. El servicio hace `GET http://192.168.100.3:3000/api/productos`, sin body ni headers explícitos.
+5. El servicio hace `GET http://172.20.10.2:3000/api/productos`, sin body ni headers explícitos.
 6. Debe recibir una lista JSON. Cada elemento se convierte con `ProductModel.fromJson()` en [product_model.dart](lib/models/product_model.dart#L17): `_id` se asigna a `id` String, `price` se convierte a double y también se parsean `title`, `description`, `category` e `image`.
 7. El controlador deriva `categories` de los valores `product.category`, selecciona la opción “Todos” (`null`) y publica estado loaded.
 8. `_catalogBody()` en [home_view.dart](lib/views/home_view.dart#L235) presenta carga, error, lista vacía o una cuadrícula de tarjetas `ProductCard`.
 
 ### 3. Lado backend (`server.js`)
 
-`app.get('/api/productos', ...)` está definido en [server.js](../../../../Downloads/app-login-mongo/app-login-mongo/server.js#L72). Consulta `Productos` con `productosCollection.find({}).toArray()` y responde **200** con una lista JSON de todos los documentos. Si la consulta falla, responde **500** `{"error":"Error al obtener los productos"}`.
+`GET /api/productos` está definido en [product_routes.js](backend/routes/product_routes.js). [product_controller.js](backend/controllers/product_controller.js) consulta el modelo y responde **200** con una lista JSON de los documentos. Si la consulta falla, responde **500** `{"error":"Error al obtener los productos"}`.
 
 ### 4. De vuelta en Flutter y errores
 
@@ -259,7 +261,7 @@ El usuario toca un chip en la sección **Explorar por categoría** del catálogo
 
 ### 3. Lado backend (`server.js`)
 
-No hay ruta `/api/productos/:category` ni filtro de categoría en el servidor. Toda consulta se atiende con `GET /api/productos`, definido en [server.js](../../../../Downloads/app-login-mongo/app-login-mongo/server.js#L72), que devuelve todos los documentos de `Productos`.
+No hay ruta `/api/productos/:category` ni filtro de categoría en el servidor. Toda consulta se atiende con `GET /api/productos`, definido en [product_routes.js](backend/routes/product_routes.js), que devuelve todos los documentos de `Productos`.
 
 ### 4. De vuelta en Flutter y errores
 
@@ -288,7 +290,7 @@ El usuario toca una tarjeta del catálogo.
 
 ### 3. Lado backend (`server.js`)
 
-La búsqueda usa el endpoint `GET /api/productos` en [server.js](../../../../Downloads/app-login-mongo/app-login-mongo/server.js#L72), que consulta todos los productos. No se envía el ObjectId al servidor en una ruta individual para este flujo.
+La búsqueda usa el endpoint `GET /api/productos` en [product_routes.js](backend/routes/product_routes.js), que consulta todos los productos. No se envía el ObjectId al servidor en una ruta individual para este flujo.
 
 ### 4. De vuelta en Flutter y errores
 
@@ -319,7 +321,7 @@ Un Administrador toca el botón **Agregar producto** (ícono `+`) en la barra su
 6. El controlador comprueba el rol otra vez, conectividad y llama `ProductService.createProduct()` en [product_service.dart](lib/services/product_service.dart#L123).
 7. El servicio comprueba su callback `_isAdmin`, luego envía:
    - Verbo: `POST`
-   - URL: `http://192.168.100.3:3000/api/productos`
+   - URL: `http://172.20.10.2:3000/api/productos`
    - Header: `Content-Type: application/json`
    - Body: `{"title":"...","price":12.5,"description":"...","category":"...","image":"https://..."}`
 8. El servicio exige un objeto JSON de respuesta con `_id` String, lo convierte a `ProductModel` y lo devuelve.
@@ -327,7 +329,7 @@ Un Administrador toca el botón **Agregar producto** (ícono `+`) en la barra su
 
 ### 3. Lado backend (`server.js`)
 
-`app.post('/api/productos', ...)` está definido en [server.js](../../../../Downloads/app-login-mongo/app-login-mongo/server.js#L81).
+`POST /api/productos` está definido en [product_routes.js](backend/routes/product_routes.js); la validación y la inserción se realizan en [product_controller.js](backend/controllers/product_controller.js) y [product_model.js](backend/models/product_model.js).
 
 1. `parseProduct(req.body)` en la línea 22 exige `title`, `description`, `category`, `image` como strings no vacíos y `price` como número finito. Recorta espacios externos en los strings.
 2. Si un campo no es válido, responde **400**: `{"error":"Se requieren title, price, description, category e image válidos."}`.
@@ -364,7 +366,7 @@ Un Administrador abre el detalle y toca **Editar**; cambia los datos del diálog
 6. El controlador comprueba rol, conectividad y llama `ProductService.updateProduct()` en [product_service.dart](lib/services/product_service.dart#L145).
 7. El servicio hace:
    - Verbo: `PUT`
-   - URL: `http://192.168.100.3:3000/api/productos/<product.id>`
+   - URL: `http://172.20.10.2:3000/api/productos/<product.id>`
    - Header: `Content-Type: application/json`
    - Body: `{"title":"...","price":12.5,"description":"...","category":"...","image":"<imagen existente>"}`
    `product.id` es el `_id` Mongo convertido a String.
@@ -373,7 +375,7 @@ Un Administrador abre el detalle y toca **Editar**; cambia los datos del diálog
 
 ### 3. Lado backend (`server.js`)
 
-`app.put('/api/productos/:id', ...)` está definido en [server.js](../../../../Downloads/app-login-mongo/app-login-mongo/server.js#L98).
+`PUT /api/productos/:id` está definido en [product_routes.js](backend/routes/product_routes.js) y se procesa en [product_controller.js](backend/controllers/product_controller.js).
 
 1. `parseObjectId(req.params.id)` (línea 44) exige exactamente 24 caracteres hexadecimales. Si no es válido, responde **400**: `{"error":"El ID debe ser un ObjectId válido."}`.
 2. Valida body con `parseProduct()`; si falla, **400** con el mensaje de campos inválidos.
@@ -407,13 +409,13 @@ Un Administrador toca **Eliminar** en el detalle y confirma en el diálogo.
 2. `_delete()` primero pregunta “¿Estás seguro de eliminar este producto?”. Cancelar devuelve `false` y termina sin request; solo confirmar continúa.
 3. La vista llama `ProductController.deleteProduct(id)` en [product_controller.dart](lib/controllers/product_controller.dart#L188).
 4. El controlador verifica rol y conectividad, luego llama `ProductService.deleteProduct(id)` en [product_service.dart](lib/services/product_service.dart#L167).
-5. El servicio hace `DELETE http://192.168.100.3:3000/api/productos/<id>`, donde `<id>` es el `_id` Mongo String. No envía body ni Authorization header.
+5. El servicio hace `DELETE http://172.20.10.2:3000/api/productos/<id>`, donde `<id>` es el `_id` Mongo String. No envía body ni Authorization header.
 6. Si la respuesta confirma `producto`, el detalle muestra `Producto eliminado.` y hace `Navigator.pop(context, id)`.
 7. `_openProduct()` en [home_view.dart](lib/views/home_view.dart#L59) recibe el ID y llama `ProductController.removeById()` en [product_controller.dart](lib/controllers/product_controller.dart#L214), quitando esa tarjeta del estado local sin volver a consultar todo el catálogo.
 
 ### 3. Lado backend (`server.js`)
 
-`app.delete('/api/productos/:id', ...)` está definido en [server.js](../../../../Downloads/app-login-mongo/app-login-mongo/server.js#L127).
+`DELETE /api/productos/:id` está definido en [product_routes.js](backend/routes/product_routes.js) y se procesa en [product_controller.js](backend/controllers/product_controller.js).
 
 1. Valida el ID con `parseObjectId()`. Un ID inválido responde **400** `{"error":"El ID debe ser un ObjectId válido."}`.
 2. Ejecuta `findOneAndDelete({ _id: objectId })` en `Productos`.
@@ -483,7 +485,7 @@ Las comprobaciones ocurren al construir el catálogo, abrir una ruta administrat
 
 ### 3. Lado backend (`server.js`)
 
-Los endpoints de productos `POST`, `PUT` y `DELETE` en [server.js](../../../../Downloads/app-login-mongo/app-login-mongo/server.js#L81), [server.js](../../../../Downloads/app-login-mongo/app-login-mongo/server.js#L98) y [server.js](../../../../Downloads/app-login-mongo/app-login-mongo/server.js#L127) no verifican JWT, identidad ni rol. Tampoco reciben header Authorization desde `ProductService`.
+Los endpoints de productos `POST`, `PUT` y `DELETE` en [product_routes.js](backend/routes/product_routes.js) no verifican JWT, identidad ni rol. Tampoco reciben header Authorization desde `ProductService`.
 
 ### 4. De vuelta en Flutter y comportamiento de cada rol
 
@@ -514,7 +516,7 @@ No existe método consumidor en `AuthService` ni en las vistas actuales para `GE
 
 ### 3. Lado backend (`server.js`)
 
-`app.get('/api/usuarios', ...)` está definido en [server.js](../../../../Downloads/app-login-mongo/app-login-mongo/server.js#L244). Ejecuta `usuariosCollection.find({}).toArray()` sin projection y responde **200** con todos los campos de todos los usuarios. Actualmente incluye contraseñas en texto plano. Si falla, responde **500** `{"error":"Error al obtener los usuarios"}`.
+`GET /api/usuarios` está definido en [user_routes.js](backend/routes/user_routes.js). El modelo [user_model.js](backend/models/user_model.js) excluye el campo `password` de la proyección y responde **200** con los demás campos. Si falla, responde **500** `{"error":"Error al obtener los usuarios"}`.
 
 ### 4. De vuelta en Flutter
 
@@ -522,7 +524,7 @@ No hay flujo de respuesta en Flutter porque la app no consume esta ruta.
 
 ### 5. Datos involucrados
 
-Lectura completa de documentos de `Usuarios`, incluidos `_id`, `email`, `username`, `password` e `id`. La inclusión de `password` es el comportamiento actual del servidor y expone las credenciales a cualquier cliente que alcance la ruta.
+Lectura de documentos de `Usuarios`, sin el campo `password`.
 
 ---
 
@@ -538,7 +540,7 @@ En el código revisado no existe pantalla, botón de compra ni otro flujo visibl
 
 ### 3. Lado backend
 
-No hay colección ni endpoint de carrito descrito en `server.js`.
+No hay colección ni endpoint de carrito en el backend MVC.
 
 ### 4. De vuelta en Flutter
 
@@ -562,7 +564,7 @@ La carga usa `loadCatalog()` y `_catalogBody()` ya descritos en el escenario 5. 
 
 ### 3. Lado backend
 
-Si se envía un GET, el endpoint es `GET /api/productos` de [server.js](../../../../Downloads/app-login-mongo/app-login-mongo/server.js#L72). Una lista vacía responde **200** `[]`; un fallo al consultar responde **500** `{"error":"Error al obtener los productos"}`. La descarga de imágenes remotas ocurre desde Flutter/dispositivo, no desde este endpoint.
+Si se envía un GET, el endpoint es `GET /api/productos` de [product_routes.js](backend/routes/product_routes.js). Una lista vacía responde **200** `[]`; un fallo al consultar responde **500** `{"error":"Error al obtener los productos"}`. La descarga de imágenes remotas ocurre desde Flutter/dispositivo, no desde este endpoint.
 
 ### 4. De vuelta en Flutter y errores
 
@@ -578,7 +580,7 @@ GET solo lee documentos de `Productos`; el fallo de imagen no modifica ni elimin
 
 ## 16. Endpoint de productos: validación, IDs y forma de los documentos
 
-El helper `parseProduct()` de [server.js](../../../../Downloads/app-login-mongo/app-login-mongo/server.js#L22) se comparte entre creación y actualización. Acepta solo objetos JSON con `title`, `description`, `category`, `image` como strings no vacíos y `price` numérico finito; devuelve una versión con strings recortados. `parseObjectId()` en la línea 44 admite únicamente 24 caracteres hexadecimales y construye un `ObjectId`.
+El helper `parseProduct()` de [product_model.js](backend/models/product_model.js) se comparte entre creación y actualización. Acepta solo objetos JSON con `title`, `description`, `category`, `image` como strings no vacíos y `price` numérico finito; devuelve una versión con strings recortados. `parseObjectId()` admite únicamente 24 caracteres hexadecimales y construye un `ObjectId`.
 
 El modelo Flutter [ProductModel](lib/models/product_model.dart#L1) representa:
 

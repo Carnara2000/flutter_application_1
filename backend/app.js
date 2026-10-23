@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const productRoutes = require('./routes/product_routes');
 const userRoutes = require('./routes/user_routes');
+const { connectDatabase } = require('./config/database');
 
 const app = express();
 
@@ -11,6 +12,21 @@ app.use(express.json({ limit: '1mb' }));
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
+
+// Asegura que Mongo esté conectado antes de atender las demás rutas
+app.use('/api', async (_req, res, next) => {
+  try {
+    await connectDatabase();
+    next();
+  } catch (error) {
+    console.error('No se pudo conectar a MongoDB:', error.message);
+    res.status(500).json({
+      error: 'No se pudo conectar a la base de datos.',
+      detalle: error.message,
+    });
+  }
+});
+
 app.use('/api/productos', productRoutes);
 app.use('/api/usuarios', userRoutes);
 

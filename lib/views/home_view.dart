@@ -5,6 +5,7 @@ import '../controllers/auth_controller.dart';
 import '../controllers/cart_controller.dart';
 import '../controllers/product_controller.dart';
 import '../models/enums/user_role.dart';
+import '../models/product_model.dart';
 import '../routes/app_routes.dart';
 import '../theme/app_theme.dart';
 import 'product_detail_view.dart';
@@ -38,6 +39,12 @@ class _CatalogViewState extends State<_CatalogView> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = context.read<AuthController>().user;
+      context.read<CartController>().activateForUser(
+            user?.role == UserRole.client ? user?.id : null,
+          );
+    });
     WidgetsBinding.instance.addPostFrameCallback(
       // loadCatalog está definido en product_controller.dart.
       (_) => context.read<ProductController>().loadCatalog(),
@@ -48,11 +55,29 @@ class _CatalogViewState extends State<_CatalogView> {
   Future<void> _handleLogout() async {
     final authController = context.read<AuthController>();
     // clear está definido en cart_controller.dart.
-    context.read<CartController>().clear();
+    await context.read<CartController>().clear();
     // logout está definido en auth_controller.dart.
     await authController.logout();
     if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (_) => false);
+  }
+
+  Future<void> _addToCart(ProductModel product) async {
+    try {
+      await context.read<CartController>().addProduct(product);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Producto añadido al carrito.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo guardar el carrito: $error')),
+      );
+    }
   }
 
   /// Abre el detalle y sincroniza bajas; las tarjetas de esta vista lo invocan y el detalle está en product_detail_view.dart.
@@ -74,6 +99,8 @@ class _CatalogViewState extends State<_CatalogView> {
     final user = auth.user;
     final controller = context.watch<ProductController>();
     final isAdmin = user?.role == UserRole.admin;
+    final isClient = user?.role == UserRole.client;
+    final cart = context.watch<CartController>();
     return Scaffold(
       appBar: AppBar(
         title: Row(
@@ -105,6 +132,16 @@ class _CatalogViewState extends State<_CatalogView> {
           ],
         ),
         actions: [
+          if (isClient)
+            IconButton(
+              tooltip: 'Mi carrito',
+              onPressed: () => Navigator.pushNamed(context, AppRoutes.cart),
+              icon: Badge(
+                isLabelVisible: cart.itemCount > 0,
+                label: Text('${cart.itemCount}'),
+                child: const Icon(Icons.shopping_cart_outlined),
+              ),
+            ),
           if (isAdmin)
             Padding(
               padding: const EdgeInsets.only(right: 6),
@@ -284,7 +321,13 @@ class _CatalogViewState extends State<_CatalogView> {
       itemBuilder: (_, index) {
         final product = controller.products[index];
         return ProductCard(
-            product: product, onTap: () => _openProduct(product.id));
+          product: product,
+          onTap: () => _openProduct(product.id),
+          onAddToCart:
+              context.read<AuthController>().user?.role == UserRole.client
+                  ? () => _addToCart(product)
+                  : null,
+        );
       },
     );
   }

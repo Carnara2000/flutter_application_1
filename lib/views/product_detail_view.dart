@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/auth_controller.dart';
+import '../controllers/cart_controller.dart';
 import '../controllers/product_controller.dart';
 import '../models/enums/user_role.dart';
 import '../models/product_model.dart';
@@ -176,6 +177,10 @@ class _ProductDetailContent extends StatelessWidget {
                 ),
               ),
             ),
+            if (authRole == UserRole.client) ...[
+              const SizedBox(height: 18),
+              _AddToCartSection(product: product),
+            ],
             if (isAdmin) ...[
               const SizedBox(height: 18),
               Wrap(
@@ -258,6 +263,86 @@ class _ProductDetailContent extends StatelessWidget {
                 'No se pudo eliminar.')),
       );
     }
+  }
+}
+
+class _AddToCartSection extends StatefulWidget {
+  final ProductModel product;
+
+  const _AddToCartSection({required this.product});
+
+  @override
+  State<_AddToCartSection> createState() => _AddToCartSectionState();
+}
+
+class _AddToCartSectionState extends State<_AddToCartSection> {
+  int _quantity = 1;
+
+  Future<void> _addToCart() async {
+    try {
+      await context
+          .read<CartController>()
+          .addProduct(widget.product, quantity: _quantity);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Producto añadido al carrito.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo guardar el carrito: $error')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Cantidad',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  tooltip: 'Reducir cantidad',
+                  onPressed:
+                      _quantity > 1 ? () => setState(() => _quantity--) : null,
+                  icon: const Icon(Icons.remove_circle_outline),
+                ),
+                SizedBox(
+                  width: 44,
+                  child: Text(
+                    '$_quantity',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Aumentar cantidad',
+                  onPressed: () => setState(() => _quantity++),
+                  icon: const Icon(Icons.add_circle_outline),
+                ),
+              ],
+            ),
+            FilledButton.icon(
+              onPressed: _addToCart,
+              icon: const Icon(Icons.add_shopping_cart_rounded),
+              label: const Text('Agregar al carrito'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

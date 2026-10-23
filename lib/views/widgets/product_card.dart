@@ -6,8 +6,14 @@ import '../../theme/app_theme.dart';
 class ProductCard extends StatelessWidget {
   final ProductModel product;
   final VoidCallback onTap;
+  final VoidCallback? onAddToCart;
 
-  const ProductCard({required this.product, required this.onTap, super.key});
+  const ProductCard({
+    required this.product,
+    required this.onTap,
+    this.onAddToCart,
+    super.key,
+  });
 
   /// Renderiza una tarjeta de producto; se usa desde home_view.dart para cada producto.
   @override
@@ -91,11 +97,22 @@ class ProductCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const Icon(
-                    Icons.arrow_forward_rounded,
-                    color: AppColors.green,
-                    size: 19,
-                  ),
+                  if (onAddToCart != null)
+                    IconButton(
+                      tooltip: 'Agregar al carrito',
+                      onPressed: onAddToCart,
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(
+                        Icons.add_shopping_cart_rounded,
+                        color: AppColors.green,
+                      ),
+                    )
+                  else
+                    const Icon(
+                      Icons.arrow_forward_rounded,
+                      color: AppColors.green,
+                      size: 19,
+                    ),
                 ],
               ),
             ],

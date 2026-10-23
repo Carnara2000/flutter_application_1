@@ -27,6 +27,16 @@ flutter run --dart-define=API_BASE_URL=http://<IP_DEL_EQUIPO>:3000/api
 Para el emulador Android, usa normalmente `http://10.0.2.2:3000/api`; para
 Flutter Web en la misma computadora, usa `http://localhost:3000/api`.
 
+## Carrito local (US09 y US10)
+
+El carrito solo se muestra a usuarios Cliente. Sus artículos se guardan en
+SharedPreferences en el dispositivo, separados por ID de usuario; no se envían
+operaciones del carrito a la API. Al cerrar sesión se limpia el carrito activo.
+La funcionalidad está organizada en `lib/models/cart_item.dart`,
+`lib/services/cart_repository.dart`, `lib/controllers/cart_controller.dart` y
+`lib/views/cart_view.dart`. El botón de pago permanece como punto de entrada
+visual; la simulación de pago no forma parte de estas historias.
+
 Las instrucciones de configuración de MongoDB y los endpoints están en
 [`backend/README.md`](backend/README.md). La arquitectura y los flujos se
 describen en [`MANUAL_TECNICO.md`](MANUAL_TECNICO.md).

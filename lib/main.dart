@@ -8,6 +8,7 @@ import 'theme/app_theme.dart';
 import 'views/login_view.dart';
 import 'views/home_view.dart';
 import 'views/product_form_view.dart';
+import 'views/cart_view.dart';
 
 /// Inicia la aplicación; es el punto de entrada invocado por Flutter.
 void main() {
@@ -37,6 +38,10 @@ class MyApp extends StatelessWidget {
           AppRoutes.createProduct: (context) =>
               context.read<AuthController>().user?.role == UserRole.admin
                   ? const ProductFormView()
+                  : const HomeView(),
+          AppRoutes.cart: (context) =>
+              context.read<AuthController>().user?.role == UserRole.client
+                  ? const CartView()
                   : const HomeView(),
         },
       ),

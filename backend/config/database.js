@@ -9,19 +9,36 @@ async function connectDatabase(){
     throw new Error('Falta configurar MONGO_URI en el archivo .env');
   }
 
-  // Si ya existe un cliente, reutilizarlo (importante para serverless)
-  if (!client) {
-    client = new MongoClient(uri, {
-      maxPoolSize: 10,
-      minPoolSize: 2,
-      maxIdleTimeMS: 60000,
-    });
-    await client.connect();
+  try {
+    // Crear nuevo cliente si no existe
+    if (!client) {
+      console.log('🔌 Creando cliente MongoDB...');
+      client = new MongoClient(uri, {
+        maxPoolSize: 10,
+        minPoolSize: 2,
+        maxIdleTimeMS: 60000,
+        serverSelectionTimeoutMS: 5000,
+      });
+    }
+
+    // Conectar si no está conectado
+    if (!client.topology || !client.topology.isConnected()) {
+      console.log('🔌 Conectando a MongoDB...');
+      await client.connect();
+      console.log('✅ Conexión establecida');
+    }
+
+    // Obtener la base de datos
     database = client.db('appLogin');
-    console.log('✅ Conectado exitosamente a MongoDB.');
+    console.log('📦 Base de datos: appLogin');
+    
+    return database;
+  } catch (error) {
+    console.error('❌ Error al conectar:', error.message);
+    console.error('Código:', error.code);
+    console.error('Nombre:', error.name);
+    throw error;
   }
-  
-  return database;
 }
 
 function getDatabase(){

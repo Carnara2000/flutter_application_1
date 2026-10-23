@@ -20,8 +20,12 @@ async function createProduct(req, res) {
   try {
     return res.status(201).json(await Product.create(product));
   } catch (error) {
-    console.error('Error al crear el producto:', error);
-    return res.status(500).json({ error: 'Error al crear el producto' });
+    console.error('Error al obtener los productos:', error);
+    return res.status(500).json({ 
+      error: 'Error al obtener los productos', 
+      detalle: error.message,
+      mongo_uri_configurada: process.env.MONGO_URI ? 'Sí, está configurada' : 'No, falta la variable'
+    });
   }
 }
 

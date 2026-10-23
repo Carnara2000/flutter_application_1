@@ -6,7 +6,7 @@ import '../models/product_model.dart';
 
 const String baseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'https://flutter-application-1-lo-udi.vercel.app/api',
+  defaultValue: 'https://flutter-application-1-nu-ten.vercel.app/api',
 );
 
 class ProductException implements Exception {

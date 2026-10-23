@@ -38,16 +38,18 @@ async function startServer() {
   return server;
 }
 
-if (require.main === module) {
-  startServer().catch(async (error) => {
-    console.error('No se pudo iniciar el backend:', error);
-    try {
-      await closeDatabase();
-    } catch (closeError) {
-      console.error('Error al cerrar MongoDB:', closeError);
-    }
-    process.exitCode = 1;
-  });
-}
+// Iniciar el servidor siempre (necesario para entornos serverless como Vercel)
+startServer().catch(async (error) => {
+  console.error('No se pudo iniciar el backend:', error);
+  try {
+    await closeDatabase();
+  } catch (closeError) {
+    console.error('Error al cerrar MongoDB:', closeError);
+  }
+  process.exitCode = 1;
+});
+
+// Exportar la app por si Vercel la necesita como módulo
+module.exports = app;
 
 module.exports = { startServer };

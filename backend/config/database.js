@@ -2,54 +2,52 @@ const { MongoClient } = require('mongodb');
 
 let client;
 let database;
+let connecting;
 
-async function connectDatabase(){
+async function connectDatabase() {
+  // Ya conectada: reutilizar
+  if (database) return database;
+  // Conexión en curso: esperar la misma promesa
+  if (connecting) return connecting;
+
   const uri = process.env.MONGO_URI;
-  if(!uri){
-    throw new Error('Falta configurar MONGO_URI en el archivo .env');
+  if (!uri) {
+    throw new Error('Falta configurar MONGO_URI (en .env o en las variables de Vercel)');
   }
 
-  try {
-    // Crear nuevo cliente si no existe
-    if (!client) {
-      console.log('🔌 Creando cliente MongoDB...');
+  connecting = (async () => {
+    try {
+      console.log('Conectando a MongoDB...');
       client = new MongoClient(uri, {
         maxPoolSize: 10,
-        minPoolSize: 2,
-        maxIdleTimeMS: 60000,
-        serverSelectionTimeoutMS: 5000,
+        serverSelectionTimeoutMS: 8000,
       });
-    }
-
-    // Conectar si no está conectado
-    if (!client.topology || !client.topology.isConnected()) {
-      console.log('🔌 Conectando a MongoDB...');
       await client.connect();
-      console.log('✅ Conexión establecida');
+      database = client.db('appLogin');
+      console.log('Conexión establecida: appLogin');
+      return database;
+    } catch (error) {
+      console.error('Error al conectar:', error.message);
+      client = undefined;
+      database = undefined;
+      throw error;
+    } finally {
+      connecting = undefined;
     }
+  })();
 
-    // Obtener la base de datos
-    database = client.db('appLogin');
-    console.log('📦 Base de datos: appLogin');
-    
-    return database;
-  } catch (error) {
-    console.error('❌ Error al conectar:', error.message);
-    console.error('Código:', error.code);
-    console.error('Nombre:', error.name);
-    throw error;
-  }
+  return connecting;
 }
 
-function getDatabase(){
-  if(!database){
+function getDatabase() {
+  if (!database) {
     throw new Error('La conexión a MongoDB todavía no está inicializada.');
   }
   return database;
 }
 
-async function closeDatabase(){
-  if(!client) return;
+async function closeDatabase() {
+  if (!client) return;
   await client.close();
   client = undefined;
   database = undefined;

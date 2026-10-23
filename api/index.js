@@ -1,25 +1,19 @@
-const express = require('express');
 const { MongoClient } = require('mongodb');
-const cors = require('cors');
-
-const app = express();
-app.use(cors());
-app.use(express.json());
 
 const uri = process.env.MONGO_URI;
-let client;
-let db;
+console.log('🔌 MONGO_URI presente:', uri ? 'SÍ' : 'NO');
+console.log('🔌 MONGO_URI valor:', uri ? uri.substring(0, 30) + '...' : 'undefined');
+
+let client = null;
+let db = null;
 
 async function getDB() {
   if (!db) {
-    console.log('🔌 Conectando a MongoDB...');
-    console.log('URI presente:', uri ? 'SÍ' : 'NO');
-    
+    console.log('🔌 Iniciando conexión a MongoDB...');
     client = new MongoClient(uri, {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 10000,
     });
-    
     await client.connect();
     db = client.db('appLogin');
     console.log('✅ MongoDB conectado a appLogin');
@@ -27,46 +21,38 @@ async function getDB() {
   return db;
 }
 
-// Ruta de health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+module.exports = async (req, res) => {
+  const url = req.url;
+  console.log('📨 Request recibido:', url);
 
-// Ruta de productos
-app.get('/api/productos', async (req, res) => {
   try {
-    const database = await getDB();
-    const productos = await database.collection('Productos').find({}).toArray();
-    console.log(`✅ ${productos.length} productos encontrados`);
-    res.json(productos);
+    if (url === '/api/health' || url === '/') {
+      return res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    }
+
+    if (url === '/api/productos') {
+      const database = await getDB();
+      const productos = await database.collection('Productos').find({}).toArray();
+      console.log(`✅ ${productos.length} productos encontrados`);
+      return res.json(productos);
+    }
+
+    if (url === '/api/usuarios') {
+      const database = await getDB();
+      const usuarios = await database.collection('Usuarios').find({}, { projection: { password: 0 } }).toArray();
+      console.log(`✅ ${usuarios.length} usuarios encontrados`);
+      return res.json(usuarios);
+    }
+
+    res.status(404).json({ error: 'Ruta no encontrada' });
   } catch (error) {
-    console.error('Error en /api/productos:', error);
+    console.error('❌ Error:', error.message);
+    console.error('❌ Código:', error.code);
+    console.error('❌ Nombre:', error.name);
     res.status(500).json({ 
-      error: 'Error al obtener los productos',
+      error: 'Error interno',
       detalle: error.message,
-      codigo: error.code,
-      nombre: error.name
+      codigo: error.code
     });
   }
-});
-
-// Ruta de usuarios
-app.get('/api/usuarios', async (req, res) => {
-  try {
-    const database = await getDB();
-    const usuarios = await database.collection('Usuarios').find({}, { projection: { password: 0 } }).toArray();
-    console.log(`✅ ${usuarios.length} usuarios encontrados`);
-    res.json(usuarios);
-  } catch (error) {
-    console.error('Error en /api/usuarios:', error);
-    res.status(500).json({ 
-      error: 'Error al obtener los usuarios',
-      detalle: error.message,
-      codigo: error.code,
-      nombre: error.name
-    });
-  }
-});
-
-// Exportar para Vercel
-module.exports = app;
+};

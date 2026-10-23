@@ -5,7 +5,11 @@ async function getProducts(_req, res) {
     return res.json(await Product.findAll());
   } catch (error) {
     console.error('Error al obtener los productos:', error);
-    return res.status(500).json({ error: 'Error al obtener los productos' });
+    return res.status(500).json({ 
+      error: 'Error al obtener los productos', 
+      detalle: error.message,
+      mongo_uri_configurada: process.env.MONGO_URI ? 'Sí, está configurada' : 'No, falta la variable'
+    });
   }
 }
 
@@ -20,11 +24,10 @@ async function createProduct(req, res) {
   try {
     return res.status(201).json(await Product.create(product));
   } catch (error) {
-    console.error('Error al obtener los productos:', error);
+    console.error('Error al crear el producto:', error);
     return res.status(500).json({ 
-      error: 'Error al obtener los productos', 
-      detalle: error.message,
-      mongo_uri_configurada: process.env.MONGO_URI ? 'Sí, está configurada' : 'No, falta la variable'
+      error: 'Error al crear el producto',
+      detalle: error.message 
     });
   }
 }
@@ -50,7 +53,7 @@ async function updateProduct(req, res) {
     return res.json(updated);
   } catch (error) {
     console.error('Error al actualizar el producto:', error);
-    return res.status(500).json({ error: 'Error al actualizar el producto' });
+    return res.status(500).json({ error: 'Error al actualizar el producto', detalle: error.message });
   }
 }
 
@@ -71,7 +74,7 @@ async function deleteProduct(req, res) {
     });
   } catch (error) {
     console.error('Error al eliminar el producto:', error);
-    return res.status(500).json({ error: 'Error al eliminar el producto' });
+    return res.status(500).json({ error: 'Error al eliminar el producto', detalle: error.message });
   }
 }
 

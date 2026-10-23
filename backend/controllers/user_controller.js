@@ -4,9 +4,13 @@ const User = require('../models/user_model');
 async function getUsers(_req, res) {
   try {
     return res.json(await User.findAll());
-  } catch (error) {
+    } catch (error) {
     console.error('Error al obtener los usuarios:', error);
-    return res.status(500).json({ error: 'Error al obtener los usuarios' });
+    return res.status(500).json({ 
+      error: 'Error al obtener los usuarios', 
+      detalle: error.message,
+      mongo_uri_configurada: process.env.MONGO_URI ? 'Sí, está configurada' : 'No, falta la variable'
+    });
   }
 }
 
@@ -89,3 +93,4 @@ async function register(body, res) {
 }
 
 module.exports = { getUsers, createOrLogin };
+

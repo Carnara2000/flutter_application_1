@@ -38,18 +38,18 @@ async function startServer() {
   return server;
 }
 
-// Iniciar el servidor siempre (necesario para entornos serverless como Vercel)
-startServer().catch(async (error) => {
-  console.error('No se pudo iniciar el backend:', error);
-  try {
-    await closeDatabase();
-  } catch (closeError) {
-    console.error('Error al cerrar MongoDB:', closeError);
-  }
-  process.exitCode = 1;
+// 1. Conectar a la base de datos inmediatamente (funciona en Vercel y local)
+connectDatabase().catch((error) => {
+  console.error('Error al conectar a MongoDB:', error);
 });
 
-// Exportar la app por si Vercel la necesita como módulo
+// 2. Exportar la app para que Vercel la use como manejador de solicitudes (¡ESTO ES CLAVE!)
 module.exports = app;
 
-module.exports = { startServer };
+// 3. Si se ejecuta directamente con Node (entorno local), iniciar el servidor tradicional
+if (require.main === module) {
+  startServer().catch(async (error) => {
+    console.error('No se pudo iniciar el backend:', error);
+    process.exitCode = 1;
+  });
+}

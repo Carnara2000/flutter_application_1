@@ -3,6 +3,7 @@ const cors = require('cors');
 const productRoutes = require('./routes/product_routes');
 const userRoutes = require('./routes/user_routes');
 const { connectDatabase } = require('./config/database');
+const carritoRoutes = require('./routes/carrito_routes');
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use('/api', async (_req, res, next) => {
 
 app.use('/api/productos', productRoutes);
 app.use('/api/usuarios', userRoutes);
+app.use('/api/carritos', carritoRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada.' });

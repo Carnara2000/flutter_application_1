@@ -56,6 +56,14 @@ module.exports = async (req, res) => {
       return res.status(200).json(usuarios);
     }
 
+    // ✅ NUEVA RUTA PARA CARRITOS
+    if (path === '/api/carritos') {
+      const database = await getDB();
+      const carritos = await database.collection('Carritos').find({}).toArray();
+      console.log(`✅ ${carritos.length} carritos encontrados`);
+      return res.status(200).json(carritos);
+    }
+
     return res.status(404).json({ error: 'Ruta no encontrada', path });
   } catch (error) {
     console.error('Error:', error.message);
